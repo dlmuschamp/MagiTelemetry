@@ -9,11 +9,29 @@
 * project. This is my first C project. 
 */
 
-// remember to compile using gcc in terminal 
 #include <stdio.h>
 #include <stdlib.h>
 
+//define is basically acting as a global with text replacement 
+#define BAT_PERCENT_PATH "/sys/class/power_supply/BAT0/capacity"
+#define BAT_BUFFER_SIZE 10
+
 int main() {
+
+  FILE *bat_percent_info = fopen(BAT_PERCENT_PATH, "r");
+  
+  if (bat_percent_info == NULL) {
+    printf("Could not locate a file at the specified path.\n");
+    return 1;
+  }  
+
+  char perc_buffer[BAT_BUFFER_SIZE];
+
+  fgets(perc_buffer, BAT_BUFFER_SIZE, bat_percent_info);
+
+  printf("Current battery: %s", perc_buffer);
+
+  fclose(bat_percent_info);
 
 
   //Successful Exit
