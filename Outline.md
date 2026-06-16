@@ -1,7 +1,7 @@
 # Project MAGI: Embedded Linux Telemetry Daemon
 
 ## Architecture Overview
-* **Core Engine:** Pure C headless daemon (CS107 & Embedded Systems architecture).
+* **Core Engine:** Pure C headless daemon
 * **Data Ingestion:** Direct parsing of Linux kernel `sysfs` and `procfs` nodes.
 * **Data Processing:** Ring buffers, state-free math, dead-reckoning calibration.
 * **IPC Protocol:** Standard output stream (JSON formatted) to a Wayland display server.
