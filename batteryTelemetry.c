@@ -11,8 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h> //unix standard
 
-#define BAT_ENERGY_PATH                                                        \
-  "/sys/class/power_supply/BAT0/energy_now" // microwatt hours
+#define BAT_ENERGY_PATH "/sys/class/power_supply/BAT0/energy_now"
 #define BAT_POWER_PATH "/sys/class/power_supply/BAT0/power_now"
 
 #define BUFFER_SIZE 64
@@ -36,7 +35,11 @@ int main() {
     rolling_power_values[current_power_index] =
         get_hardware_value(BAT_POWER_PATH);
     num_readings++;
-    current_power_index++;
+    current_power_index = (current_power_index + 1) % POWER_BUFFER_SIZE;
+
+    if (num_readings < POWER_BUFFER_SIZE) {
+      num_readings++;
+    }
 
     if (num_readings >=
         POWER_BUFFER_SIZE) { // wait till we have the first 10 samples
