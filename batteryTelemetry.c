@@ -11,23 +11,61 @@
 #include <stdlib.h>
 #include <unistd.h> //unix standard
 
-#define BAT_PERCENT_PATH "/sys/class/power_supply/BAT0/capacity"
-#define BAT_ENERGY_PATH "/sys/class/power_supply/BAT0/energy_now"
+#define BAT_ENERGY_PATH                                                        \
+  "/sys/class/power_supply/BAT0/energy_now" // microwatt hours
 #define BAT_POWER_PATH "/sys/class/power_supply/BAT0/power_now"
 
 #define BUFFER_SIZE 64
 #define BASE 10
+#define POWER_BUFFER_SIZE 10
+
+#define SLEEP_TIMER 5
 
 long get_hardware_value(const char path[]);
 
 int main() {
-  long cur_bat = get_hardware_value(BAT_PERCENT_PATH);
-  long cur_energy = get_hardware_value(BAT_ENERGY_PATH);
-  long cur_power = get_hardware_value(BAT_POWER_PATH);
+  long rolling_power_values[POWER_BUFFER_SIZE] = {0};
+  long power_avg = 0, total_battery_seconds = 0, remaining_battery_sec = 0,
+       remaining_battery_min = 0, remaining_battery_hours = 0;
+  int current_power_index = 0, num_readings = 0;
 
-  printf("Current Battery Percent: %ld\nCurrent Battery Energy: %ld\nCurrent "
-         "Battery Power: %ld\n",
-         cur_bat, cur_energy, cur_power);
+  printf("Waiting until a baseline power draw has been set...\n");
+
+  while (1) {
+
+    rolling_power_values[current_power_index] =
+        get_hardware_value(BAT_POWER_PATH);
+    num_readings++;
+    current_power_index++;
+
+    if (num_readings >=
+        POWER_BUFFER_SIZE) { // wait till we have the first 10 samples
+
+      // first recalc power_avg
+      int power_sum = 0;
+      for (int i = 0; i < POWER_BUFFER_SIZE; i++) {
+        power_sum += rolling_power_values[i];
+      }
+      power_avg = (double)power_sum / POWER_BUFFER_SIZE;
+
+      // then compute total battery sec
+      long cur_energy = get_hardware_value(BAT_ENERGY_PATH);
+      total_battery_seconds =
+          (cur_energy * 3600) / power_avg; // 3600 is num sec in 1 hr
+
+      // lastly convert into hour, min, sec
+      remaining_battery_hours = total_battery_seconds / 3600;
+      remaining_battery_min = (total_battery_seconds % 3600) / 60;
+      remaining_battery_sec = total_battery_seconds % 60;
+
+      // print
+      printf("Remaining battery: %02ld:%02ld:%02ld\n", remaining_battery_hours,
+             remaining_battery_min, remaining_battery_sec);
+    }
+
+    sleep(SLEEP_TIMER);
+  }
+
   // Successful Exit
   return 0;
 }
