@@ -1,44 +1,55 @@
 /**
-* Damian Luciano Muschamp 
-* 14 Jun 2026
-* ------------------------
-* batteryTelemetry is a program that 
-* simply reads and prints out the remaining
-* battery of my laptop in pure C as part of 
-* my larger NGE-inspired hardware info daemon
-* project. This is my first C project. 
-*/
+ * @file
+ * @brief batteryTelemetry is a program that
+ * simply reads and prints out the remaining
+ * battery of my laptop in pure C as part of
+ * my larger NGE-inspired hardware info daemon
+ * project. This is my first C project.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
-
-//#define is a "preprocesser directive" so its basically direct text replacement
-//during compilation. we use this for declaring arrays in C because array declaration 
-//requires a specific numerical value to know how much space to allocate for that array.
+#include <unistd.h> //unix standard
 
 #define BAT_PERCENT_PATH "/sys/class/power_supply/BAT0/capacity"
-#define BAT_BUFFER_SIZE 10
+#define BAT_ENERGY_PATH "/sys/class/power_supply/BAT0/energy_now"
+#define BAT_POWER_PATH "/sys/class/power_supply/BAT0/power_now"
+
+#define BUFFER_SIZE 64
+#define BASE 10
+
+long get_hardware_value(const char path[]);
 
 int main() {
+  long cur_bat = get_hardware_value(BAT_PERCENT_PATH);
+  long cur_energy = get_hardware_value(BAT_ENERGY_PATH);
+  long cur_power = get_hardware_value(BAT_POWER_PATH);
 
-  FILE *bat_percent_info = fopen(BAT_PERCENT_PATH, "r");
+  printf("Current Battery Percent: %ld\nCurrent Battery Energy: %ld\nCurrent "
+         "Battery Power: %ld\n",
+         cur_bat, cur_energy, cur_power);
+  // Successful Exit
+  return 0;
+}
 
-  if (bat_percent_info == NULL) {
+/**
+ * @brief Opens the specified kernel file, safely extracts the string data,
+ * and converts it into a long integer.
+ * * @param path The absolute system path to the target file
+ * @return long The extracted integer, or -1 if the file fails to open
+ */
+long get_hardware_value(const char path[]) {
+  FILE *sys_file = fopen(path, "r");
+
+  if (sys_file == NULL) {
     printf("Could not locate a file at the specified path.\n");
-    return 1;
+    return -1;
   }
 
-  //New char buffer (string) to store the battery percent info
-  char perc_buffer[BAT_BUFFER_SIZE];
+  char data_buffer[BUFFER_SIZE];
+  fgets(data_buffer, BUFFER_SIZE, sys_file);
+  long parsed_data = strtol(data_buffer, NULL, BASE);
 
-  //Reading the file and writing the characters to the buffer
-  fgets(perc_buffer, BAT_BUFFER_SIZE, bat_percent_info);
-
-  //Printing the final buffer. %s means to print the entire string (char buffer)
-  printf("Current battery: %s", perc_buffer);
-
-  fclose(bat_percent_info);
-
-  //Successful Exit
-  return 0; 
+  fclose(sys_file);
+  return parsed_data;
 }
