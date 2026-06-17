@@ -25,18 +25,39 @@
 #define SLEEP_TIMER 5
 
 // Function Signatures
-long get_hardware_value(const char path[]);
+long get_hardware_value(const char *path);
+void battery_life_dead_reckoning(long total_battery_sec,
+                                 long *shared_battery_sec,
+                                 long *last_sent_battery_sec,
+                                 long *last_sent_timestamp);
 
 int main() {
+  // shared memory set up
+  int shm_fd = shm_open("/nge_battery", O_CREAT | O_RDWR, 0666);
+  if (shm_fd == -1) {
+    printf("Fatal Error: Could not open shared memory.\n");
+    return 1;
+  }
+
+  ftruncate(shm_fd, sizeof(long));
+
+  long *shared_battery_sec =
+      mmap(0, sizeof(long), PROT_WRITE, MAP_SHARED, shm_fd, 0);
+  if (shared_battery_sec == MAP_FAILED) {
+    printf("Fatal Error: Could not map shared memory.\n");
+    return 1;
+  }
+
   long rolling_power_values[POWER_BUFFER_SIZE] = {0};
-  long power_avg = 0, total_battery_seconds = 0, remaining_battery_sec = 0,
-       remaining_battery_min = 0, remaining_battery_hours = 0;
+  long power_avg = 0, total_battery_sec = 0;
   int current_power_index = 0, num_readings = 0;
+
+  long last_sent_battery_seconds = -1, last_sent_timestamp = -1;
 
   printf("Waiting until a baseline power draw has been set...\n");
 
+  // polling loop
   while (1) {
-
     rolling_power_values[current_power_index] =
         get_hardware_value(BAT_POWER_PATH);
     current_power_index = (current_power_index + 1) % POWER_BUFFER_SIZE;
@@ -47,7 +68,6 @@ int main() {
 
     if (num_readings >=
         POWER_BUFFER_SIZE) { // wait till we have the first 10 samples
-
       // first recalc power_avg
       long power_sum = 0;
       for (int i = 0; i < POWER_BUFFER_SIZE; i++) {
@@ -55,35 +75,34 @@ int main() {
       }
       power_avg = (double)power_sum / POWER_BUFFER_SIZE;
 
-      // then compute total battery sec
+      // if laptop is charging, power_avg will be negative/0
       long cur_energy = get_hardware_value(BAT_ENERGY_PATH);
-      total_battery_seconds =
-          (cur_energy * 3600) / power_avg; // 3600 is num sec in 1 hr
+      if (power_avg <= 0) {
+        total_battery_sec = -1;
+      } else { // then compute total battery sec
+        total_battery_sec =
+            (cur_energy * 3600) / power_avg; // 3600 is num sec in 1 hr
+      }
 
-      // lastly convert into hour, min, sec
-      remaining_battery_hours = total_battery_seconds / 3600;
-      remaining_battery_min = (total_battery_seconds % 3600) / 60;
-      remaining_battery_sec = total_battery_seconds % 60;
-
-      // print
-      printf("Remaining battery: %02ld:%02ld:%02ld\n", remaining_battery_hours,
-             remaining_battery_min, remaining_battery_sec);
+      // call dead reckoning helper function
+      battery_life_dead_reckoning(total_battery_sec, shared_battery_sec,
+                                  &last_sent_battery_seconds,
+                                  &last_sent_timestamp);
     }
 
     sleep(SLEEP_TIMER);
   }
 
-  // Successful Exit
   return 0;
 }
 
 /**
  * @brief Opens the specified kernel file, safely extracts the string data,
  * and converts it into a long integer.
- * * @param path The absolute system path to the target file
+ * @param path The absolute system path to the target file
  * @return long The extracted integer, or -1 if the file fails to open
  */
-long get_hardware_value(const char path[]) {
+long get_hardware_value(const char *path) {
   FILE *sys_file = fopen(path, "r");
 
   if (sys_file == NULL) {
@@ -97,4 +116,48 @@ long get_hardware_value(const char path[]) {
 
   fclose(sys_file);
   return parsed_data;
+}
+
+/**
+ * @brief Will only write new remaining battery life to shared memory if the
+ * current calculated life deviates from the UI's simulated "dead reckoning"
+ * approximation by 10 or more minutes (600 seconds).
+ *
+ * @param total_battery_sec The true battery calculated in main (passed by
+ * value)
+ * @param shared_battery_sec Pointer to the mapped POSIX memory block
+ * @param last_sent_battery_sec Pointer to the anchor value stored in main
+ * @param last_sent_timestamp Pointer to the anchor time stored in main
+ */
+void battery_life_dead_reckoning(long total_battery_sec,
+                                 long *shared_battery_sec,
+                                 long *last_sent_battery_sec,
+                                 long *last_sent_timestamp) {
+
+  long cur_time = time(NULL);
+
+  // First run. No anchor exists yet. Initialize and write to memory.
+  if (*last_sent_battery_sec == -1) {
+    *shared_battery_sec = total_battery_sec;
+    *last_sent_battery_sec = total_battery_sec;
+    *last_sent_timestamp = cur_time;
+  } else {
+    // check elapsed time to current estimate
+    long seconds_since_last_update = cur_time - *last_sent_timestamp;
+    long simulated_ui_display =
+        *last_sent_battery_sec - seconds_since_last_update;
+
+    if (simulated_ui_display < 0) {
+      simulated_ui_display = 0;
+    }
+
+    // drift check
+    long drift_error = labs(total_battery_sec - simulated_ui_display);
+
+    if (drift_error >= 600) {
+      *shared_battery_sec = total_battery_sec;
+      *last_sent_battery_sec = total_battery_sec;
+      *last_sent_timestamp = cur_time;
+    }
+  }
 }
