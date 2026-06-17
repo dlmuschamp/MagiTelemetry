@@ -2,7 +2,7 @@
 CC = gcc
 
 # 2. The exact, ultra-strict CS107 flags from the course reader
-CFLAGS = -g -O0 -std=gnu99 -Wall -Wfloat-equal -Wtype-limits -Wpointer-arith -Wlogical-op -Wshadow -fno-diagnostics-show-option
+CFLAGS = -g -O0 -std=gnu99 -Wall -Wfloat-equal -Wtype-limits -Wpointer-arith -Wlogical-op -Wshadow -fno-diagnostics-show-option -lrt
 
 # 3. Automatically find all .c files in the current directory
 SRCS = $(wildcard *.c)

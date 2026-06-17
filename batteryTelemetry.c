@@ -7,9 +7,13 @@
  * project. This is my first C project.
  */
 
+#include <fcntl.h> // "File Control". Provides the O_CREAT and O_RDWR flags to tell Linux HOW to open the shared memory.
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h> //unix standard
+#include <stdlib.h> // Provides labs() for absolute values, and strtol() for parsing kernel strings.
+#include <sys/mman.h> // "Memory Management". Provides the core IPC functions: shm_open() and mmap().
+#include <sys/stat.h> // Provides file mode constants (like the 0666 permissions) used when creating shared memory.
+#include <time.h> // Provides time(NULL) to get the current Unix timestamp for the shadow simulation.
+#include <unistd.h> // "Unix Standard". Provides sleep(), ftruncate() to size memory, and close().
 
 #define BAT_ENERGY_PATH "/sys/class/power_supply/BAT0/energy_now"
 #define BAT_POWER_PATH "/sys/class/power_supply/BAT0/power_now"
@@ -20,6 +24,7 @@
 
 #define SLEEP_TIMER 5
 
+// Function Signatures
 long get_hardware_value(const char path[]);
 
 int main() {
@@ -34,10 +39,9 @@ int main() {
 
     rolling_power_values[current_power_index] =
         get_hardware_value(BAT_POWER_PATH);
-    num_readings++;
     current_power_index = (current_power_index + 1) % POWER_BUFFER_SIZE;
 
-    if (num_readings < POWER_BUFFER_SIZE) {
+    if (num_readings < POWER_BUFFER_SIZE) { // prevent overflow
       num_readings++;
     }
 
@@ -45,7 +49,7 @@ int main() {
         POWER_BUFFER_SIZE) { // wait till we have the first 10 samples
 
       // first recalc power_avg
-      int power_sum = 0;
+      long power_sum = 0;
       for (int i = 0; i < POWER_BUFFER_SIZE; i++) {
         power_sum += rolling_power_values[i];
       }
