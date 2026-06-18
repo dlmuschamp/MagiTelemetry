@@ -8,6 +8,7 @@
  */
 
 // include statements
+#include "magi_ipc.h"
 #include <fcntl.h> // "File Control". Provides the O_CREAT and O_RDWR flags to tell Linux HOW to open the shared memory.
 #include <stdio.h>
 #include <stdlib.h> // Provides labs() for absolute values, and strtol() for parsing kernel strings.
@@ -16,7 +17,7 @@
 #include <time.h> // Provides time(NULL) to get the current Unix timestamp for the shadow simulation.
 #include <unistd.h> // "Unix Standard". Provides sleep(), ftruncate() to size memory, and close().
 
-// Buffer sizes needed at run time so use #define
+// Buffer sizes needed at compile time so use #define
 #define BUFFER_SIZE 64
 #define POWER_BUFFER_SIZE 10
 #define UNIX_RDWR_PERM 0666
@@ -26,10 +27,12 @@
 static const char *BAT_ENERGY_PATH = "/sys/class/power_supply/BAT0/energy_now";
 static const char *BAT_POWER_PATH = "/sys/class/power_supply/BAT0/power_now";
 
-static const int SLEEP_TIMER = 5;
 static const int BASE = 10;
+static const int SAMPLE_INTERVAL_SEC = 5;
 static const int SEC_IN_HOUR = 3600;
 static const int SEC_IN_10_MIN = 600;
+
+static char *BAT_SUBSYS = "BATTERY";
 
 // Function Signatures
 static long get_hardware_value(const char *path);
@@ -40,18 +43,21 @@ static void battery_life_dead_reckoning(long total_battery_sec,
 
 int main() {
   // shared memory set up
-  int shm_fd = shm_open("/nge_battery", O_CREAT | O_RDWR, UNIX_RDWR_PERM);
+  int shm_fd = shm_open(SHM_BATTERY, O_CREAT | O_RDWR, UNIX_RDWR_PERM);
   if (shm_fd == -1) {
-    printf("Fatal Error: Could not open shared memory.\n");
+    MAGI_LOG_ERROR(BAT_SUBSYS, "Could not open shared memory.\n");
     return 1;
   }
 
   ftruncate(shm_fd, sizeof(long));
 
   long *shared_battery_sec =
-      mmap(0, sizeof(long), PROT_WRITE, MAP_SHARED, shm_fd, 0);
+      mmap(0, sizeof(long), PROT_WRITE, MAP_SHARED, shm_fd,
+           0); // first 0 just tells kernel to find any spot in memory with
+               // enough space, the second 0 says to start mapping the data from
+               // byte 0 in the shared memory spot
   if (shared_battery_sec == MAP_FAILED) {
-    printf("Fatal Error: Could not map shared memory.\n");
+    MAGI_LOG_ERROR(BAT_SUBSYS, "Could not map shared memory.\n");
     return 1;
   }
 
@@ -60,8 +66,6 @@ int main() {
   int current_power_index = 0, num_readings = 0;
 
   long last_sent_battery_seconds = -1, last_sent_timestamp = -1;
-
-  printf("Waiting until a baseline power draw has been set...\n");
 
   // polling loop
   while (1) {
@@ -96,7 +100,7 @@ int main() {
                                   &last_sent_timestamp);
     }
 
-    sleep(SLEEP_TIMER);
+    sleep(SAMPLE_INTERVAL_SEC);
   }
 
   return 0;
@@ -112,7 +116,8 @@ static long get_hardware_value(const char *path) {
   FILE *sys_file = fopen(path, "r");
 
   if (sys_file == NULL) {
-    printf("Could not locate a file at the specified path.\n");
+    MAGI_LOG_ERROR(BAT_SUBSYS,
+                   "Could not locate a file at the specified path.\n");
     return -1;
   }
 
@@ -150,20 +155,22 @@ static void battery_life_dead_reckoning(long total_battery_sec,
   } else {
     // check elapsed time to current estimate
     long seconds_since_last_update = cur_time - *last_sent_timestamp;
-    long simulated_ui_display =
+    long simulated_time_remaining_sec =
         *last_sent_battery_sec - seconds_since_last_update;
 
-    if (simulated_ui_display < 0) {
-      simulated_ui_display = 0;
+    if (simulated_time_remaining_sec <= 0) {
+      simulated_time_remaining_sec = -1;
     }
 
     // drift check
-    long drift_error = labs(total_battery_sec - simulated_ui_display);
+    long drift_deviation =
+        labs(total_battery_sec - simulated_time_remaining_sec);
 
-    if (drift_error >= SEC_IN_10_MIN) {
+    if (drift_deviation >= SEC_IN_10_MIN) {
       *shared_battery_sec = total_battery_sec;
       *last_sent_battery_sec = total_battery_sec;
       *last_sent_timestamp = cur_time;
     }
   }
+  printf("Current shared_battery_sec: %ld\n", *shared_battery_sec);
 }
