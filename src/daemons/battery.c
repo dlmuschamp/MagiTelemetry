@@ -7,6 +7,7 @@
  * project. This is my first C project.
  */
 
+// include statements
 #include <fcntl.h> // "File Control". Provides the O_CREAT and O_RDWR flags to tell Linux HOW to open the shared memory.
 #include <stdio.h>
 #include <stdlib.h> // Provides labs() for absolute values, and strtol() for parsing kernel strings.
@@ -15,25 +16,31 @@
 #include <time.h> // Provides time(NULL) to get the current Unix timestamp for the shadow simulation.
 #include <unistd.h> // "Unix Standard". Provides sleep(), ftruncate() to size memory, and close().
 
-#define BAT_ENERGY_PATH "/sys/class/power_supply/BAT0/energy_now"
-#define BAT_POWER_PATH "/sys/class/power_supply/BAT0/power_now"
-
+// Buffer sizes needed at run time so use #define
 #define BUFFER_SIZE 64
-#define BASE 10
 #define POWER_BUFFER_SIZE 10
+#define UNIX_RDWR_PERM 0666
 
-#define SLEEP_TIMER 5
+// Use const for all other globals. Also use static to  ensure its only visible
+// within this file
+static const char *BAT_ENERGY_PATH = "/sys/class/power_supply/BAT0/energy_now";
+static const char *BAT_POWER_PATH = "/sys/class/power_supply/BAT0/power_now";
+
+static const int SLEEP_TIMER = 5;
+static const int BASE = 10;
+static const int SEC_IN_HOUR = 3600;
+static const int SEC_IN_10_MIN = 600;
 
 // Function Signatures
-long get_hardware_value(const char *path);
-void battery_life_dead_reckoning(long total_battery_sec,
-                                 long *shared_battery_sec,
-                                 long *last_sent_battery_sec,
-                                 long *last_sent_timestamp);
+static long get_hardware_value(const char *path);
+static void battery_life_dead_reckoning(long total_battery_sec,
+                                        long *shared_battery_sec,
+                                        long *last_sent_battery_sec,
+                                        long *last_sent_timestamp);
 
 int main() {
   // shared memory set up
-  int shm_fd = shm_open("/nge_battery", O_CREAT | O_RDWR, 0666);
+  int shm_fd = shm_open("/nge_battery", O_CREAT | O_RDWR, UNIX_RDWR_PERM);
   if (shm_fd == -1) {
     printf("Fatal Error: Could not open shared memory.\n");
     return 1;
@@ -80,8 +87,7 @@ int main() {
       if (power_avg <= 0) {
         total_battery_sec = -1;
       } else { // then compute total battery sec
-        total_battery_sec =
-            (cur_energy * 3600) / power_avg; // 3600 is num sec in 1 hr
+        total_battery_sec = (cur_energy * SEC_IN_HOUR) / power_avg;
       }
 
       // call dead reckoning helper function
@@ -102,7 +108,7 @@ int main() {
  * @param path The absolute system path to the target file
  * @return long The extracted integer, or -1 if the file fails to open
  */
-long get_hardware_value(const char *path) {
+static long get_hardware_value(const char *path) {
   FILE *sys_file = fopen(path, "r");
 
   if (sys_file == NULL) {
@@ -129,10 +135,10 @@ long get_hardware_value(const char *path) {
  * @param last_sent_battery_sec Pointer to the anchor value stored in main
  * @param last_sent_timestamp Pointer to the anchor time stored in main
  */
-void battery_life_dead_reckoning(long total_battery_sec,
-                                 long *shared_battery_sec,
-                                 long *last_sent_battery_sec,
-                                 long *last_sent_timestamp) {
+static void battery_life_dead_reckoning(long total_battery_sec,
+                                        long *shared_battery_sec,
+                                        long *last_sent_battery_sec,
+                                        long *last_sent_timestamp) {
 
   long cur_time = time(NULL);
 
@@ -154,7 +160,7 @@ void battery_life_dead_reckoning(long total_battery_sec,
     // drift check
     long drift_error = labs(total_battery_sec - simulated_ui_display);
 
-    if (drift_error >= 600) {
+    if (drift_error >= SEC_IN_10_MIN) {
       *shared_battery_sec = total_battery_sec;
       *last_sent_battery_sec = total_battery_sec;
       *last_sent_timestamp = cur_time;

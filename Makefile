@@ -1,28 +1,37 @@
 # 1. Define the compiler
 CC = gcc
 
-# 2. The exact, ultra-strict CS107 flags from the course reader
-CFLAGS = -g -O0 -std=gnu99 -Wall -Wfloat-equal -Wtype-limits -Wpointer-arith -Wlogical-op -Wshadow -fno-diagnostics-show-option -lrt
+# 2. The exact, CS107 flags + the include directory path
+CFLAGS = -g -O0 -std=gnu99 -Wall -Wfloat-equal -Wtype-limits -Wpointer-arith -Wlogical-op -Wshadow -fno-diagnostics-show-option -I./include
 
-# 3. Automatically find all .c files in the current directory
-SRCS = $(wildcard *.c)
+# 3. Linker flags (POSIX Real-Time library for shared memory)
+LDFLAGS_DAEMON = -lrt
 
-# 4. Generate a list of target executables by stripping the ".c" extension
-# (e.g., "battery.c telemetry.c" becomes "battery telemetry")
-PROGS = $(patsubst %.c,%,$(SRCS))
+# 4. The default rule: build everything
+all: prep battery wifi cpu client
 
-# 5. The default rule: if you just type 'make', compile all found programs
-all: $(PROGS)
+# 5. Create the bin/ directory silently if it doesn't exist
+prep:
+	@mkdir -p bin
 
-# 6. The Pattern Rule: How to build ANY program from its .c file
-# $< means "the input file" (e.g., battery.c)
-# $@ means "the target name" (e.g., battery)
-%: %.c
-	$(CC) $(CFLAGS) $< -o $@
+# 6. Daemon Targets
+# $< means "the input file" (e.g., src/daemons/battery.c)
+battery: src/daemons/battery.c
+	$(CC) $(CFLAGS) $< -o bin/magid_battery $(LDFLAGS_DAEMON)
 
-# 7. Clean up all generated executables
+wifi: src/daemons/wifi.c
+	$(CC) $(CFLAGS) $< -o bin/magid_wifi $(LDFLAGS_DAEMON)
+
+cpu: src/daemons/cpu.c
+	$(CC) $(CFLAGS) $< -o bin/magid_cpu $(LDFLAGS_DAEMON)
+
+# 7. Client Target (We will expand this later to include LVGL and SDL2)
+client: src/client/main.c
+	$(CC) $(CFLAGS) $< -o bin/magi_client $(LDFLAGS_DAEMON)
+
+# 8. Clean up all generated executables
 clean:
-	rm -f $(PROGS)
+	rm -rf bin/
 
-# Tell Make that 'all' and 'clean' aren't actual files we want to build
-.PHONY: all clean
+# Tell Make that these are commands, not actual files
+.PHONY: all prep clean battery wifi cpu client
