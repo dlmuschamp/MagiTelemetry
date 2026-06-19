@@ -172,5 +172,4 @@ static void battery_life_dead_reckoning(long total_battery_sec,
       *last_sent_timestamp = cur_time;
     }
   }
-  printf("Current shared_battery_sec: %ld\n", *shared_battery_sec);
 }
