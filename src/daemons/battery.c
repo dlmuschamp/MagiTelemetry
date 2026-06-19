@@ -10,6 +10,7 @@
 // include statements
 #include "magi_ipc.h"
 #include <fcntl.h> // "File Control". Provides the O_CREAT and O_RDWR flags to tell Linux HOW to open the shared memory.
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> // Provides labs() for absolute values, and strtol() for parsing kernel strings.
 #include <sys/mman.h> // "Memory Management". Provides the core IPC functions: shm_open() and mmap().
@@ -30,7 +31,8 @@ static const char *BAT_POWER_PATH = "/sys/class/power_supply/BAT0/power_now";
 static const int BASE = 10;
 static const int SAMPLE_INTERVAL_SEC = 5;
 static const int SEC_IN_HOUR = 3600;
-static const int SEC_IN_10_MIN = 600;
+static const int MAX_RECKONING_DEVIATION_SEC =
+    900; // only update initial timer if we deviate by >= 15 minutes
 
 static char *BAT_SUBSYS = "BATTERY";
 
@@ -166,7 +168,7 @@ static void battery_life_dead_reckoning(long total_battery_sec,
     long drift_deviation =
         labs(total_battery_sec - simulated_time_remaining_sec);
 
-    if (drift_deviation >= SEC_IN_10_MIN) {
+    if (drift_deviation >= MAX_RECKONING_DEVIATION_SEC) {
       *shared_battery_sec = total_battery_sec;
       *last_sent_battery_sec = total_battery_sec;
       *last_sent_timestamp = cur_time;

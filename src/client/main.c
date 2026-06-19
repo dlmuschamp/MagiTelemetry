@@ -1,45 +1,59 @@
-#include "magi_ipc.h"
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <stdint.h>
+#include <stdio.h>  // So I can use printf() to debug
+#include <stdlib.h> // Standard types
+#include <unistd.h> // For usleep()
 
-#define UNIX_RDWR_PERM 0666
+#include "lv_conf.h"
+#include "lvgl/include/lvgl/core/lv_obj_style.h"
+#include "lvgl/include/lvgl/core/lv_obj_style_gen.h"
+#include "lvgl/include/lvgl/display/lv_display.h"
+#include "lvgl/include/lvgl/lv_types.h"
+#include "lvgl/include/lvgl/widgets/lv_label.h"
+#include "lvgl/lvgl.h"
+#include "magi_ipc.h" // My custom logging macro
 
-static const char *CLIENT_SUBSYS = "CLIENT";
+static const uint32_t HOR_RES = 400, VER_RES = 300;
+static const unsigned int SLEEP_TIME_uSEC = 5000;
 
-// TESTING NOT THE FULL CLIENT
-int main() {
-  printf("MAGI Client Dummy: Booting up...\n");
+// find out pros and cons of unsigned ints.
+static char *WINDOW_NAME = "Magi Display";
+static const char *MAIN_SUBSYS = "MAIN";
 
-  // 1. Open the shared memory block (Read Only)
-  int shm_fd = shm_open(SHM_BATTERY, O_RDONLY, UNIX_RDWR_PERM);
-  if (shm_fd == -1) {
-    MAGI_LOG_ERROR(CLIENT_SUBSYS, "Could not locate /dev/shm/magi_battery");
-    return 1;
+int main(void) {
+
+  lv_init();
+
+  lv_display_t *primary_disp = lv_wayland_window_create(
+      HOR_RES, VER_RES, WINDOW_NAME, NULL); // call back can be null
+
+  if (primary_disp == NULL) {
+    MAGI_LOG_ERROR(MAIN_SUBSYS,
+                   "New window pointer is null. Hyprland rejected the window.");
+    return -1;
   }
 
-  // 2. Map the memory into this program (Read Only)
-  long *shared_battery_sec =
-      mmap(0, sizeof(long), PROT_READ, MAP_SHARED, shm_fd, 0);
-  if (shared_battery_sec == MAP_FAILED) {
-    MAGI_LOG_ERROR(CLIENT_SUBSYS, "Could not map memory");
-    return 1;
-  }
+  // grab active screen canvas
+  lv_obj_t *active_screen = lv_screen_active();
 
-  printf("MAGI Link Established. Reading telemetry...\n");
+  // set active screen background to black
+  lv_obj_set_style_bg_color(active_screen, lv_color_hex(0x000000),
+                            LV_PART_MAIN);
 
-  // 3. The Monitoring Loop
+  // creating a text label and attaching it to the screen
+  lv_obj_t *label = lv_label_create(active_screen);
+  lv_label_set_text(label, "MAGI SYSTEM:\nAWAITING DATA....");
+
+  // color the text magi orange
+  lv_obj_set_style_text_color(label, lv_color_hex(0xFF9900), LV_PART_MAIN);
+
+  // center the text
+  lv_obj_center(label);
+
+  printf("Graphics Engine Online. Rendering...\n");
+
   while (1) {
-    // We just read the pointer like a normal variable!
-    long current_val = *shared_battery_sec;
-
-    printf("Current Battery Dead Reckoning: %ld seconds\n", current_val);
-
-    // Sleep for 2 seconds before checking again
-    sleep(2);
+    lv_timer_handler();
+    usleep(SLEEP_TIME_uSEC);
   }
 
   return 0;
