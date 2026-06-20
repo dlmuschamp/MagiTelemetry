@@ -10,6 +10,18 @@
 #define SHM_BATTERY "/magi_battery"
 #define SHM_WIFI "/magi_wifi"
 #define SHM_CPU "/magi_cpu"
+#define UNIX_RDWR_PERM 0666
+#define MAX_DEVIATION_SEC                                                      \
+  1200 // max time before updating timers to sync up
+       // again
+
+// Battery Daemon Struct
+typedef struct {
+  long bat_percent;
+  long shared_bat_sec;
+  long power_avg; // charging if negative
+
+} magi_battery_data_t;
 
 // The internal logging logic
 static inline void _magi_logger(const char *subsystem, const char *message,
