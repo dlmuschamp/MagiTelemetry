@@ -13,8 +13,7 @@
 
 static const uint32_t HOR_RES = 400, VER_RES = 300;
 static const uint32_t RENDER_FPS = 24;
-static const uint32_t FPS_REFRESH_MS =
-    1000 / RENDER_FPS; // FIX 2: 1000ms / 24 = 41ms
+static const uint32_t FPS_REFRESH_MS = 1000 / RENDER_FPS;
 static const unsigned int SLEEP_TIME_uSEC = 5000;
 static const unsigned int SEC_PER_HR = 3600, SEC_PER_MIN = 60, MIN_PER_HR = 60;
 static const unsigned long NANO_TO_CENTI_SEC = 10000000, CENTI_COUNTDOWN = 99;
@@ -80,7 +79,6 @@ int main(void) {
         mmap(0, sizeof(magi_battery_data_t), PROT_READ, MAP_SHARED, shm_fd, 0);
   }
 
-  // FIX 1: You must allocate memory on the heap for your struct!
   ui_context_t *ctx = malloc(sizeof(ui_context_t));
   ctx->battery_daemon_info = batd_info;
   ctx->main_label = label;
@@ -112,7 +110,7 @@ void render(lv_timer_t *timer) {
   }
   ui_ctx->current_frame_index = (ui_ctx->current_frame_index + 1) % RENDER_FPS;
 
-  // SYNC CHECK: Ensure daemon is mapped before trying to read it
+  // Ensure daemon is mapped before trying to read it
   if (ui_ctx->battery_daemon_info != MAP_FAILED) {
     if (labs(ui_ctx->current_ui_sec -
              ui_ctx->battery_daemon_info->shared_bat_sec) >=
@@ -121,7 +119,6 @@ void render(lv_timer_t *timer) {
     }
   }
 
-  // FIX 3: Convert ctx->current_ui_seconds into hours, minutes, and seconds.
   int hrs = ui_ctx->current_ui_sec / SEC_PER_HR;
   int min = (ui_ctx->current_ui_sec % SEC_PER_HR) / SEC_PER_MIN;
   int sec = ui_ctx->current_ui_sec % SEC_PER_MIN;
