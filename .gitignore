@@ -1,0 +1,9 @@
+bin/
+
+# Ignore object files
+*.o
+*.a
+
+# Ignore temporary system files
+*.swp
+.DS_Store

@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <unistd.h>
 
-// Restored Globals (Stripped of Battery/Timer specific variables)
 static const uint32_t HOR_RES = 1920, VER_RES = 1200;
 static const unsigned int SLEEP_TIME_uSEC = 5000;
 static char *WINDOW_NAME = "Magi Display";
@@ -31,7 +30,7 @@ int main(void) {
 
   printf("Graphics Engine Online. Rendering...\n");
 
-  // Main loop: Just keep the LVGL engine ticking
+  // Main loop: just keep LVGL going
   while (1) {
     lv_timer_handler();
     usleep(SLEEP_TIME_uSEC);
