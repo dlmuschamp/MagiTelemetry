@@ -1,1 +1,3 @@
--Iinclude
+-I./include
+-I./src/client
+-I./src/client/lvgl

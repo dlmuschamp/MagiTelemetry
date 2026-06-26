@@ -1,43 +1,40 @@
 CC = gcc
-
-# 1. Strict, unoptimized flags for daemon code (perfect for debugging)
-CFLAGS_DAEMON = -g -O0 -std=gnu99 -Wall -Wfloat-equal -Wtype-limits -Wpointer-arith -Wlogical-op -Wshadow -I./include
-
-# 2. Fast, relaxed flags for the massive 3rd-party graphics engine
-CFLAGS_CLIENT = -g -O3 -std=gnu99 -I./include -I./src/client
-
-# 3. Linker flags
-LDFLAGS_DAEMON = -lrt
+CFLAGS_CLIENT = -g -O3 -std=gnu99 -I./include -I./src/client -I./src/client/lvgl
 LDFLAGS_CLIENT = -lrt -lwayland-client -lwayland-cursor -lxkbcommon
 
-# 4. Bypass LVGL script
-CSRCS := $(shell find src/client/lvgl/src -type f -name "*.c")
+# --- SOURCES ---
+# Client
+CLIENT_SRCS := $(shell find src/client -type f -name "*.c" ! -path "*/lvgl/*")
+LVGL_SRCS := $(shell find src/client/lvgl/src -type f -name "*.c" ! -path "*/tests/*")
+SRCS := $(CLIENT_SRCS) $(LVGL_SRCS)
+OBJS := $(SRCS:%.c=bin/%.o)
 
-# 5. Default rule
-all: prep battery wifi cpu client
+# Daemon
+DAEMON_SRC := src/daemons/battery.c
+DAEMON_BIN := bin/magi_battery_daemon
 
-prep:
+# --- RULES ---
+# Build BOTH the client and the daemon
+all: bin/magi_client $(DAEMON_BIN)
+
+# 1. Compile the Daemon
+$(DAEMON_BIN): $(DAEMON_SRC)
 	@mkdir -p bin
+	@echo "Compiling Daemon..."
+	$(CC) -g -O3 -std=gnu99 -I./include $< -o $@ -lrt
 
-# 6. Daemon Targets
-battery: src/daemons/battery.c
-	@mkdir -p bin
-	$(CC) $(CFLAGS_DAEMON) $< -o bin/magid_battery $(LDFLAGS_DAEMON)
+# 2. Compile the Client Objects
+bin/%.o: %.c
+	@mkdir -p $(dir $@)
+	@echo "Compiling $<..."
+	$(CC) $(CFLAGS_CLIENT) -c $< -o $@
 
-wifi: src/daemons/wifi.c
-	@mkdir -p bin
-	$(CC) $(CFLAGS_DAEMON) $< -o bin/magid_wifi $(LDFLAGS_DAEMON)
-
-cpu: src/daemons/cpu.c
-	@mkdir -p bin
-	$(CC) $(CFLAGS_DAEMON) $< -o bin/magid_cpu $(LDFLAGS_DAEMON)
-
-# 7. Client Target (Uses the optimized CFLAGS_CLIENT)
-client: src/client/main.c src/client/wayland_xdg_shell.c $(CSRCS)
-	@mkdir -p bin
-	$(CC) $(CFLAGS_CLIENT) $^ -o bin/magi_client $(LDFLAGS_CLIENT)
+# 3. Link the Client
+bin/magi_client: $(OBJS)
+	@echo "Linking Client..."
+	$(CC) $(OBJS) -o $@ $(LDFLAGS_CLIENT)
 
 clean:
 	rm -rf bin/
 
-.PHONY: all prep clean battery wifi cpu client
+.PHONY: all clean
