@@ -9,4 +9,4 @@ bin/
 .DS_Store
 
 # Ignore LVGL source so it doesnt clutter commits :)
-src/client/lvgl
+src/client/lvgl*
