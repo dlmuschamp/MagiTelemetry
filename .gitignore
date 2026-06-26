@@ -7,3 +7,6 @@ bin/
 # Ignore temporary system files
 *.swp
 .DS_Store
+
+# Ignore LVGL source so it doesnt clutter commits :)
+src/client/LVGL
