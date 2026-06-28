@@ -1,2 +1,2 @@
-#Not including lvgl in GitHub language analysis 
+# Not including lvgl in GitHub language analysis 
 src/client/lvgl/* linguist-vendored
