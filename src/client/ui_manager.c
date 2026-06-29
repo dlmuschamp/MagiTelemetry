@@ -1,4 +1,6 @@
 #include "components/battery/ui_battery.h"
+#include "include/lvgl/api_map/lv_api_map_v8.h"
+#include "include/lvgl/core/lv_obj.h"
 #include "ui_styles.h"
 
 // Forward declaration so main.c can call this
@@ -6,18 +8,8 @@ void setup_main_ui(void);
 
 void setup_main_ui(void) {
   lv_obj_t *active_screen = lv_screen_active();
+  lv_obj_clear_flag(active_screen,
+                    LV_OBJ_FLAG_SCROLLABLE); // prevents crashes as well
 
-  // Set background using the style constant
-  lv_obj_set_style_bg_color(active_screen, lv_color_hex(MAGI_COLOR_BLACK),
-                            LV_PART_MAIN);
-
-  // Build the label via the component
-  lv_obj_t *bat_label = create_battery_label(active_screen);
-
-  // Apply styles to it using our style function
-  apply_magi_label_style(bat_label, &seven_segment_font);
-  lv_label_set_text(bat_label, "MAGI SYSTEM:\nAWAITING DATA....");
-
-  // Register the logic
-  init_battery_context(bat_label);
+  setup_battery_ui(active_screen);
 }
