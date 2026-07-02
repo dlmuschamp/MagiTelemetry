@@ -1,6 +1,8 @@
 #include "components/battery/ui_battery.h"
 #include "include/lvgl/api_map/lv_api_map_v8.h"
 #include "include/lvgl/core/lv_obj.h"
+#include "include/lvgl/core/lv_obj_style.h"
+#include "include/lvgl/core/lv_obj_style_gen.h"
 #include "ui_styles.h"
 
 // Forward declaration so main.c can call this
@@ -8,8 +10,11 @@ void setup_main_ui(void);
 
 void setup_main_ui(void) {
   lv_obj_t *active_screen = lv_screen_active();
+  lv_obj_add_style(active_screen, get_magi_ui_container(), DEFAULT_STATE);
   lv_obj_clear_flag(active_screen,
+
                     LV_OBJ_FLAG_SCROLLABLE); // prevents crashes as well
 
+  init_magi_styles();
   setup_battery_ui(active_screen);
 }

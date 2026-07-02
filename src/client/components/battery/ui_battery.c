@@ -1,7 +1,9 @@
 #include "ui_battery.h"
 #include "include/lvgl/api_map/lv_api_map_v8.h"
+#include "include/lvgl/core/lv_area.h"
 #include "include/lvgl/core/lv_obj.h"
 #include "include/lvgl/core/lv_obj_pos.h"
+#include "include/lvgl/core/lv_obj_style.h"
 #include "include/lvgl/core/lv_obj_style_gen.h"
 #include "include/lvgl/draw/lv_color.h"
 #include "include/lvgl/lv_types.h"
@@ -18,7 +20,7 @@
 static const unsigned int SEC_PER_HR = 3600, SEC_PER_MIN = 60, MIN_PER_HR = 60;
 static const unsigned long NANO_TO_CENTI_SEC = 10000000, CENTI_COUNTDOWN = 99;
 static const char *BAT_SUBSYS = "BATTERY UI";
-static const int NUM_BOX_WIDTH = 775, NUM_BOX_LENGTH = 300;
+static const int NUM_BOX_WIDTH = 1200, NUM_BOX_LENGTH = 400;
 static const int BORDER_WIDTH = 1;
 static const int SHADOW_WIDTH = 10;
 
@@ -35,6 +37,7 @@ ui_context_t *init_battery_context(lv_obj_t *label) {
                    "Unable to allocate memory for battery UI context.");
     return NULL;
   }
+
   int shm_fd = shm_open(SHM_BATTERY, O_RDONLY, UNIX_RDWR_PERM);
   ctx->battery_daemon_info = MAP_FAILED;
 
@@ -56,6 +59,7 @@ ui_context_t *init_battery_context(lv_obj_t *label) {
   return ctx;
 }
 
+// divide this into smaller helper functions
 void setup_battery_ui(lv_obj_t *parent_screen) {
 
   if (!parent_screen) {
@@ -63,30 +67,32 @@ void setup_battery_ui(lv_obj_t *parent_screen) {
     return;
   }
 
-  apply_bg_grad(parent_screen, BATTERY_START_GRAD_RED, BATTERY_END_GRAD_GREEN,
-                LV_GRAD_DIR_HOR);
+  // ui container and gradient
+  lv_obj_t *ui_container = lv_obj_create(parent_screen);
+  lv_obj_remove_style_all(ui_container);
+  lv_obj_set_size(ui_container, UI_WIDTH, UI_HEIGHT);
+  lv_obj_center(ui_container);
+  lv_obj_add_style(ui_container, get_magi_ui_container(), DEFAULT_STATE);
+  apply_rainbow_gradient(ui_container);
 
-  lv_obj_t *num_box = lv_obj_create(parent_screen);
+  // background box with orange outline
+  lv_obj_t *num_box = lv_obj_create(ui_container);
   lv_obj_clear_flag(num_box, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_size(num_box, NUM_BOX_WIDTH, NUM_BOX_LENGTH);
+  lv_obj_set_size(
+      num_box, LV_SIZE_CONTENT,
+      LV_SIZE_CONTENT); // change this so its padding instead of abs vals
   lv_obj_center(num_box);
-  lv_obj_set_style_bg_color(num_box, lv_color_hex(MAGI_COLOR_BLACK),
-                            DEFAULT_STATE);
+  lv_obj_add_style(num_box, get_magi_rect(), DEFAULT_STATE);
 
-  // EVA-style border
-  lv_obj_set_style_border_color(num_box, lv_color_hex(MAGI_COLOR_ORANGE),
-                                DEFAULT_STATE);
-  lv_obj_set_style_border_width(num_box, BORDER_WIDTH,
-                                DEFAULT_STATE); // Increase weight
-  lv_obj_set_style_border_side(num_box, LV_BORDER_SIDE_FULL, DEFAULT_STATE);
-
-  // actual battery time label
+  //  actual battery time label
   lv_obj_t *bat_label = create_battery_label(num_box);
   lv_obj_clear_flag(bat_label, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_add_style(bat_label, get_magi_text(), DEFAULT_STATE);
+  lv_obj_add_style(bat_label, get_magi_font(&lv_font_7seg_300), DEFAULT_STATE);
 
-  apply_label_font_and_color(bat_label, &lv_font_7seg_175, MAGI_COLOR_ORANGE);
   lv_label_set_text(bat_label, "AWAITING DATA");
 
+  // change this to match the new batteyr label pointer
   ui_context_t *ctx = init_battery_context(bat_label);
 }
 

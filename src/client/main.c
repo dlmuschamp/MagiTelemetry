@@ -1,10 +1,9 @@
-// FILE: src/client/main.c
 #include "../include/magi_ipc.h"
 #include "lvgl/lvgl.h"
+#include "ui_styles.h"
 #include <stdio.h>
 #include <unistd.h>
 
-static const uint32_t HOR_RES = 1920, VER_RES = 1200;
 static const unsigned int SLEEP_TIME_uSEC = 5000, uSEC_TO_mSEC = 1000;
 static char *WINDOW_NAME = "Magi Display";
 static const char *MAIN_SUBSYS = "MAIN";

@@ -12,7 +12,7 @@
 #define SHM_CPU "/magi_cpu"
 #define UNIX_RDWR_PERM 0666
 #define MAX_DEVIATION_SEC                                                      \
-  1200 // max time before updating timers to sync up
+  1800 // max time before updating timers to sync up
        // again
 
 static const int DATE_BUFFER_SIZE = 32;
