@@ -1,6 +1,6 @@
 #include "../include/magi_ipc.h"
 #include "lvgl/lvgl.h"
-#include "ui_styles.h"
+#include "ui_structure.h" //physical constraints
 #include <stdio.h>
 #include <unistd.h>
 

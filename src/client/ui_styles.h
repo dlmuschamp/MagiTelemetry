@@ -1,25 +1,12 @@
 #ifndef UI_STYLES_H
 #define UI_STYLES_H
 
-#include "include/lvgl/api_map/lv_api_map_v9_1.h"
-#include "include/lvgl/draw/lv_grad.h"
 #include "include/lvgl/lv_types.h"
 #include "lvgl/lvgl.h"
 #include <stdint.h>
 
 // color ref:
 // https://zemnmez.medium.com/why-we-dont-have-uis-like-the-ones-in-neon-genesis-9b6631dc3714
-// screen constants
-static const uint32_t HOR_RES = 1920, VER_RES = 1200; // px
-
-// UI will have a 21:9 aspect ratio.
-static const double ASPECT_W = 21.0, ASPECT_H = 9.0;
-static const double ASPECT_RATIO = ASPECT_W / ASPECT_H;
-static const int UI_WIDTH = HOR_RES, UI_HEIGHT = HOR_RES * (1.0 / ASPECT_RATIO);
-
-// Timing Constants
-static const uint32_t RENDER_FPS = 24;
-static const uint32_t FPS_REFRESH_MS = 1000 / 24;
 
 // MAGI HEX COLORS
 static const uint32_t MAGI_COLOR_BLACK = 0x000000;
@@ -46,7 +33,7 @@ static const lv_opa_t MAGI_TEXT_OPACITY = 10;                        // percent
 static const int32_t MAGI_TEXT_OFFSET_X = 2, MAGI_TEXT_OFFSET_Y = 2; // px
 
 static const uint32_t RECT_BORDER_WIDTH = 2; // px
-static const uint32_t RECT_PADDING = 20;
+static const uint32_t RECT_PADDING = 25;
 
 // is being used as a lv_style_selector_t
 static const lv_style_selector_t DEFAULT_STATE = 0;
@@ -56,9 +43,9 @@ extern const lv_font_t seven_segment_font; // size 16
 extern const lv_font_t lv_font_7seg_400;   // size 400
 extern const lv_font_t lv_font_7seg_300;   // size 300
 extern const lv_font_t lv_font_7seg_200;   // size 200
-extern const lv_font_t lv_font_7seg_175;   // size 200
+extern const lv_font_t lv_font_7seg_175;   // size 175
 
-// EN/JP NOTO Fonts for all text
+// EN/JP NOTO Fonts for all text //includes kanji for battery daemon
 extern const lv_font_t lv_font_noto_150;
 extern const lv_font_t lv_font_noto_40;
 
@@ -124,31 +111,4 @@ void init_magi_styles(void);
  */
 void apply_rainbow_gradient(lv_obj_t *ui_container);
 
-// replace this with style stuff
-/**
- * @brief apply_label_font_and_color will set the lvgl text object's font and
- * color to the hex color argument and a font from ui_styles.h
- *
- * @param label created in the ui_telemetryType.c
- * @param font from ui_styles.h. pass the address of the font using &.
- * @param color passed from ui_telemetryType.c. Can either be a custom hex color
- * or one defined from ui_styles.h
- */
-void apply_label_font_and_color(lv_obj_t *label, const lv_font_t *font,
-                                const uint32_t color);
-
-/**
- * @brief will apply a background gradient to the passed object (which can be an
- * active screen). will start gradient with START_COLOR and end with
- * FINISH_COLOR following the direction set by dir.
- *
- * @param active_screen
- * @param START_COLOR hex color
- * @param FINISH_COLOR hex color
- * @param dir an enum that can be set to either LV_GRAD_DIR_NONE,
- * LV_GRAD_DIR_HOR, LV_GRAD_DIR_VER and others as listed here:
- * https://lvgl.io/docs/open/api/draw/lv_grad_h
- */
-void apply_bg_grad(lv_obj_t *obj, const uint32_t START_COLOR,
-                   const uint32_t FINISH_COLOR, lv_grad_dir_t dir);
 #endif // UI_STYLES_H

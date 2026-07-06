@@ -1,12 +1,9 @@
 #include "ui_styles.h"
-#include "include/lvgl/api_map/lv_api_map_v8.h"
-#include "include/lvgl/core/lv_obj_style.h"
 #include "include/lvgl/core/lv_obj_style_gen.h"
 #include "include/lvgl/core/lv_style.h"
 #include "include/lvgl/core/lv_style_gen.h"
 #include "include/lvgl/draw/lv_color.h"
 #include "include/lvgl/draw/lv_grad.h"
-#include "magi_ipc.h"
 #include <stdint.h>
 
 // Style Object Definitions
@@ -103,30 +100,4 @@ void apply_rainbow_gradient(lv_obj_t *ui_container) {
   lv_grad_horizontal_init(&grad_dsc);
 
   lv_obj_set_style_bg_grad(ui_container, &grad_dsc, DEFAULT_STATE);
-}
-
-// gonig to be replaced with just styles
-void apply_label_font_and_color(lv_obj_t *label, const lv_font_t *font,
-                                const uint32_t color) {
-  if (!label) {
-    MAGI_LOG_ERROR(UI_SUBSYS, "Label pointer is null.");
-    return;
-  }
-
-  if (!font) {
-    MAGI_LOG_ERROR(UI_SUBSYS, "Font pointer is null.");
-    return;
-  }
-
-  lv_obj_set_style_text_font(label, font, DEFAULT_STATE);
-  lv_obj_set_style_text_color(label, lv_color_hex(color), DEFAULT_STATE);
-}
-
-// replace with styles
-void apply_bg_grad(lv_obj_t *obj, const uint32_t START_COLOR,
-                   const uint32_t END_COLOR, lv_grad_dir_t dir) {
-
-  lv_obj_set_style_bg_color(obj, lv_color_hex(START_COLOR), DEFAULT_STATE);
-  lv_obj_set_style_bg_grad_color(obj, lv_color_hex(END_COLOR), DEFAULT_STATE);
-  lv_obj_set_style_bg_grad_dir(obj, dir, DEFAULT_STATE);
 }

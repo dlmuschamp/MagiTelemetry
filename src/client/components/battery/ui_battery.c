@@ -1,14 +1,12 @@
 #include "ui_battery.h"
 #include "include/lvgl/api_map/lv_api_map_v8.h"
-#include "include/lvgl/core/lv_area.h"
 #include "include/lvgl/core/lv_obj.h"
 #include "include/lvgl/core/lv_obj_pos.h"
 #include "include/lvgl/core/lv_obj_style.h"
-#include "include/lvgl/core/lv_obj_style_gen.h"
-#include "include/lvgl/draw/lv_color.h"
 #include "include/lvgl/lv_types.h"
 #include "include/lvgl/widgets/lv_label.h"
 #include "magi_ipc.h"
+#include "ui_structure.h"
 #include "ui_styles.h"
 #include <fcntl.h>
 #include <stdlib.h>
@@ -16,10 +14,10 @@
 #include <time.h>
 #include <unistd.h>
 
-// Restored Original Constants
+// Global Constants
 static const unsigned int SEC_PER_HR = 3600, SEC_PER_MIN = 60, MIN_PER_HR = 60;
 static const unsigned long NANO_TO_CENTI_SEC = 10000000, CENTI_COUNTDOWN = 99;
-static const char *BAT_SUBSYS = "BATTERY UI";
+static const char *BAT_SUBSYS = "BATTERY DAEMON";
 static const int NUM_BOX_WIDTH = 1200, NUM_BOX_LENGTH = 400;
 static const int BORDER_WIDTH = 1;
 static const int SHADOW_WIDTH = 10;
@@ -54,12 +52,13 @@ ui_context_t *init_battery_context(lv_obj_t *label) {
   ctx->current_frame_index = 0;
   ctx->current_ui_sec_elapsed = 0;
 
+  // establish the render loop
   lv_timer_create(render_battery_ui, FPS_REFRESH_MS, ctx);
 
   return ctx;
 }
 
-// divide this into smaller helper functions
+// runs once
 void setup_battery_ui(lv_obj_t *parent_screen) {
 
   if (!parent_screen) {
@@ -69,33 +68,34 @@ void setup_battery_ui(lv_obj_t *parent_screen) {
 
   // ui container and gradient
   lv_obj_t *ui_container = lv_obj_create(parent_screen);
-  lv_obj_remove_style_all(ui_container);
-  lv_obj_set_size(ui_container, UI_WIDTH, UI_HEIGHT);
-  lv_obj_center(ui_container);
+  apply_ui_container_structure(ui_container);
   lv_obj_add_style(ui_container, get_magi_ui_container(), DEFAULT_STATE);
   apply_rainbow_gradient(ui_container);
 
   // background box with orange outline
   lv_obj_t *num_box = lv_obj_create(ui_container);
-  lv_obj_clear_flag(num_box, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_size(
-      num_box, LV_SIZE_CONTENT,
-      LV_SIZE_CONTENT); // change this so its padding instead of abs vals
-  lv_obj_center(num_box);
+  apply_rect_structure(num_box);
   lv_obj_add_style(num_box, get_magi_rect(), DEFAULT_STATE);
 
   //  actual battery time label
   lv_obj_t *bat_label = create_battery_label(num_box);
   lv_obj_clear_flag(bat_label, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_style(bat_label, get_magi_text(), DEFAULT_STATE);
-  lv_obj_add_style(bat_label, get_magi_font(&lv_font_7seg_300), DEFAULT_STATE);
-
+  lv_obj_add_style(bat_label, get_magi_font(&lv_font_7seg_300),
+                   DEFAULT_STATE); // default is size 300
   lv_label_set_text(bat_label, "AWAITING DATA");
 
-  // change this to match the new batteyr label pointer
+  /*
+  // active time remaining text
+  lv_obj_t *time_rem_txt = lv_label_create(ui_container);
+  lv_obj_add_style(time_rem_txt, get_magi_text(), DEFAULT_STATE);
+  lv_label_set_text(time_rem_txt, "ACTIVE TIME REMAINING:");
+  */
+
   ui_context_t *ctx = init_battery_context(bat_label);
 }
 
+// the render loop
 void render_battery_ui(lv_timer_t *timer) {
   ui_context_t *ui_ctx = (ui_context_t *)lv_timer_get_user_data(timer);
 
@@ -129,7 +129,7 @@ void render_battery_ui(lv_timer_t *timer) {
   int min = (ui_ctx->current_ui_sec_elapsed % SEC_PER_HR) / SEC_PER_MIN;
   int sec = ui_ctx->current_ui_sec_elapsed % SEC_PER_MIN;
 
-  // lazy centisecs trick restored
+  // lazy centisecs trick to count current frame and time elapsed
   struct timespec ts;
   clock_gettime(CLOCK_MONOTONIC, &ts);
   int centi_sec = ts.tv_nsec / NANO_TO_CENTI_SEC;
