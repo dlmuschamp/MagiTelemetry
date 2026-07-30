@@ -2,7 +2,6 @@
 #include "include/lvgl/api_map/lv_api_map_v8.h"
 #include "include/lvgl/core/lv_obj.h"
 #include "include/lvgl/core/lv_obj_style.h"
-#include "include/lvgl/core/lv_obj_style_gen.h"
 #include "ui_styles.h"
 
 // Forward declaration so main.c can call this

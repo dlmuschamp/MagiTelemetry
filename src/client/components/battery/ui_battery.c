@@ -85,13 +85,6 @@ void setup_battery_ui(lv_obj_t *parent_screen) {
                    DEFAULT_STATE); // default is size 300
   lv_label_set_text(bat_label, "AWAITING DATA");
 
-  /*
-  // active time remaining text
-  lv_obj_t *time_rem_txt = lv_label_create(ui_container);
-  lv_obj_add_style(time_rem_txt, get_magi_text(), DEFAULT_STATE);
-  lv_label_set_text(time_rem_txt, "ACTIVE TIME REMAINING:");
-  */
-
   ui_context_t *ctx = init_battery_context(bat_label);
 }
 
